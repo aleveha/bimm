@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
+import { MakesModule } from "./makes/makes.module";
+import { UtilsModule } from "./utils/utils.module";
 
 @Module({
-	imports: [],
+	imports: [MakesModule, UtilsModule],
 	controllers: [],
 	providers: [],
 })
