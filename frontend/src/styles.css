@@ -1,0 +1,21 @@
+body {
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    padding: 1rem 4px;
+
+    @media (min-width: 768px) {
+        font-size: 16px;
+    }
+}
+
+button,
+input {
+    border-radius: 0.4rem;
+    border: 1px rgb(128, 128, 128) solid;
+    font-size: 14px;
+    padding: 0.4rem;
+
+    @media (min-width: 768px) {
+        font-size: 16px;
+    }
+}
