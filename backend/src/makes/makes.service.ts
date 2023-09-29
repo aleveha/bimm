@@ -16,13 +16,26 @@ export class MakesService {
 		private readonly utilsService: UtilsService
 	) {}
 
-	public async getMakes(): Promise<MakeDto[]> {
+	public async getMakes(actualize?: boolean): Promise<MakeDto[]> {
+		const lastActualizationAt = await this.databaseService.actualization.findFirst({
+			select: {
+				date: true,
+			},
+			orderBy: {
+				date: "desc",
+			},
+		});
+
+		if (!actualize && lastActualizationAt && lastActualizationAt.date.getDate() === new Date().getDate()) {
+			return await this.getMakesFromDb();
+		}
+
 		const makesResponse = await this.fetchMakes();
 		const makes = makesResponse.result.slice(0, 50);
 		return await this.getVehiclesTypes(makes);
 	}
 
-	public async getMakesFromDb(): Promise<MakeDto[]> {
+	private async getMakesFromDb(): Promise<MakeDto[]> {
 		return this.databaseService.make.findMany({
 			select: {
 				makeId: true,
@@ -110,6 +123,12 @@ export class MakesService {
 			},
 			where: {
 				makeId: make.makeId,
+			},
+		});
+
+		await this.databaseService.actualization.create({
+			data: {
+				date: new Date(),
 			},
 		});
 	}

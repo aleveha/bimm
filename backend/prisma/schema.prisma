@@ -20,3 +20,8 @@ model Make {
   vehicleTypesIds Int[]
   vehicleTypes    VehicleType[] @relation(fields: [vehicleTypesIds], references: [typeId])
 }
+
+model Actualization {
+  id   String   @id @default(auto()) @map("_id") @db.ObjectId
+  date DateTime
+}

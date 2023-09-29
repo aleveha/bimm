@@ -6,11 +6,7 @@ export class MakesController {
 	constructor(private readonly makeService: MakesService) {}
 
 	@Get()
-	getAll(@Query("source") source?: string) {
-		if (source === "db") {
-			return this.makeService.getMakesFromDb();
-		}
-
-		return this.makeService.getMakes();
+	getAll(@Query("actualize") actualize?: boolean) {
+		return this.makeService.getMakes(actualize);
 	}
 }
