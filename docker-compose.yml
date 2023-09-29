@@ -5,6 +5,10 @@ services:
             dockerfile: Dockerfile
         ports:
             - "8000:8000"
+        depends_on:
+            - mongodb
+        environment:
+            DATABASE_URL: "mongodb://bimm:bimm@mongodb:27017/bimm?authSource=admin"
 
     frontend:
         build:
@@ -12,3 +16,20 @@ services:
             dockerfile: Dockerfile
         ports:
             - "3000:80"
+
+    mongodb:
+        image: 'bitnami/mongodb:4.4'
+        platform: linux/amd64
+        environment:
+            - MONGODB_ADVERTISED_HOSTNAME=127.0.0.1
+            - MONGODB_REPLICA_SET_MODE=primary
+            - MONGODB_ROOT_USER=bimm
+            - MONGODB_ROOT_PASSWORD=bimm
+            - MONGODB_REPLICA_SET_KEY=bimmreplicasetkey
+        ports:
+            - '27017:27017'
+        volumes:
+            - dbdata:/data/db
+
+volumes:
+    dbdata:
