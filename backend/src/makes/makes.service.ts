@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { UtilsService } from "../utils/utils.service";
@@ -11,6 +12,7 @@ import { MakesDto, VehicleType } from "./types/makes.dto";
 @Injectable()
 export class MakesService {
 	constructor(
+		private readonly configService: ConfigService,
 		private readonly makeServiceUtils: MakesServiceUtils,
 		private readonly utilsService: UtilsService
 	) {}
@@ -19,7 +21,6 @@ export class MakesService {
 		const makesResponse = await this.fetchMakes();
 		const makes = makesResponse.Response.Results.AllVehicleMakes.slice(0, 1000);
 		const makeTypes = await this.fetchAllMakesTypes(makes);
-		console.log(makeTypes.length);
 		return this.combineMakesWithTypes(makes, makeTypes);
 	}
 
@@ -35,7 +36,7 @@ export class MakesService {
 	private async fetchAllMakesTypes(makes: Make[]) {
 		const fulFilledResponses: MakeTypesResponse[] = [];
 
-		const chunks = this.utilsService.createChunks(makes, 10);
+		const chunks = this.utilsService.createChunks(makes, this.configService.get("MAKES_API_CHUNK_SIZE") ?? 10);
 		for (const chunk of chunks) {
 			const fetchResponse = await Promise.allSettled(
 				chunk.map(make => axios.get<string>(`https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/${make.Make_ID}?format=XML`))
