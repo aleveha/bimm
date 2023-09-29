@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
+import { DatabaseModule } from "../database/database.module";
 import { UtilsModule } from "../utils/utils.module";
 import { MakesController } from "./makes.controller";
 import { MakesService } from "./makes.service";
 import { MakesServiceUtils } from "./makes.service.utils";
 
 @Module({
-	imports: [UtilsModule],
+	imports: [UtilsModule, DatabaseModule],
 	controllers: [MakesController],
 	providers: [MakesService, MakesServiceUtils],
 })

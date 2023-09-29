@@ -1,136 +1,116 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
-import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { DatabaseService } from "../database/database.service";
 import { UtilsService } from "../utils/utils.service";
 import { MakesServiceUtils } from "./makes.service.utils";
-import type { MakeType, MakeTypesResponse } from "./types/fetch-make-type.type";
-import type { Make } from "./types/fetch-makes.type";
-import { MakesResponse } from "./types/fetch-makes.type";
-import { MakesDto, VehicleType } from "./types/makes.dto";
+import type { ParsedMake, ParsedMakesResponse } from "./types/fetch-makes.type";
+import { MakeDto } from "./types/make.dto";
 
 @Injectable()
 export class MakesService {
 	constructor(
 		private readonly configService: ConfigService,
+		private readonly databaseService: DatabaseService,
 		private readonly makeServiceUtils: MakesServiceUtils,
 		private readonly utilsService: UtilsService
 	) {}
 
-	public async getMakes() {
+	public async getMakes(): Promise<MakeDto[]> {
 		const makesResponse = await this.fetchMakes();
-		const makes = makesResponse.Response.Results.AllVehicleMakes.slice(0, 1000);
-		const makeTypes = await this.fetchAllMakesTypes(makes);
-		return this.combineMakesWithTypes(makes, makeTypes);
+		const makes = makesResponse.result.slice(0, 50);
+		return await this.getVehiclesTypes(makes);
 	}
 
-	private async fetchMakes() {
+	public async getMakesFromDb(): Promise<MakeDto[]> {
+		return this.databaseService.make.findMany({
+			select: {
+				makeId: true,
+				makeName: true,
+				vehicleTypes: {
+					select: {
+						typeId: true,
+						typeName: true,
+					},
+				},
+			},
+		});
+	}
+
+	private async fetchMakes(): Promise<ParsedMakesResponse> {
 		const res = await axios.get<string>("https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=XML");
 		if (res.status !== 200) {
 			throw new Error("Unable to fetch makes from NHTSA API\n" + res.statusText);
 		}
 
-		return this.parseMakesXmlResponse(res.data);
+		return this.makeServiceUtils.parseMakesXmlResponse(res.data);
 	}
 
-	private async fetchAllMakesTypes(makes: Make[]) {
-		const fulFilledResponses: MakeTypesResponse[] = [];
+	private async getVehiclesTypes(makes: ParsedMake[]): Promise<MakeDto[]> {
+		const makesResponses: MakeDto[] = [];
 
 		const chunks = this.utilsService.createChunks(makes, this.configService.get("MAKES_API_CHUNK_SIZE") ?? 10);
 		for (const chunk of chunks) {
 			const fetchResponse = await Promise.allSettled(
-				chunk.map(make => axios.get<string>(`https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/${make.Make_ID}?format=XML`))
+				chunk.map(make => axios.get<string>(`https://vpic.nhtsa.dot.gov/api/vehicles/GetVehicleTypesForMakeId/${make.makeId}?format=XML`))
 			);
 
 			for (const response of fetchResponse) {
 				if (response.status === "rejected") {
-					// TODO improve handling of errors, e.g. retrying or better logging
+					// better handling, e.g. retrying or logging
 					continue;
 				}
 
-				fulFilledResponses.push(this.parseMakeTypesXmlResponse(response.value.data));
+				const parsedVehicleTypes = this.makeServiceUtils.parseVehicleTypesXmlResponse(response.value.data);
+				const make = chunk.find(make => make.makeId === parsedVehicleTypes.makeId);
+				if (!make) {
+					// make from response id not found in chunk, API mistake, because we are fetching only makes from chunk
+					// better handling, e.g. logging
+					continue;
+				}
+
+				const makeDto = this.makeServiceUtils.combineMakesWithTypes(make, parsedVehicleTypes.result);
+				await this.saveMake(makeDto);
+				makesResponses.push(makeDto);
 			}
 		}
 
-		return fulFilledResponses;
+		return makesResponses;
 	}
 
-	private combineMakesWithTypes(makes: Make[], makeTypes: MakeTypesResponse[]): MakesDto {
-		const result: MakesDto = [];
-		for (const make of makes) {
-			const makeType = makeTypes.find(makeType => makeType.Response.SearchCriteria.split(":")[1].trim() === make.Make_ID.toString());
-			if (!makeType) {
-				continue;
-			}
-
-			const type = makeType.Response.Results.VehicleTypesForMakeIds;
-
-			result.push({
-				makeId: make.Make_ID,
-				makeName: make.Make_Name,
-				vehicleTypes: Array.isArray(type) ? type.map(this.createVehicleType) : [this.createVehicleType(type)],
+	private async saveMake(make: MakeDto): Promise<void> {
+		for (const type of make.vehicleTypes) {
+			await this.databaseService.vehicleType.upsert({
+				create: {
+					typeId: type.typeId,
+					typeName: type.typeName,
+				},
+				update: {
+					typeName: type.typeName,
+				},
+				where: {
+					typeId: type.typeId,
+				},
 			});
 		}
-		return result;
-	}
 
-	private parseMakesXmlResponse(xml: string): MakesResponse {
-		const validationResult = XMLValidator.validate(xml);
-		if (typeof validationResult !== "boolean") {
-			throw new Error("Unable to validate XML with makes response:\n" + validationResult.err.msg);
-		}
-
-		const parser = new XMLParser();
-		const json = parser.parse(xml);
-		if (!this.makeServiceUtils.isMakesResponse(json)) {
-			throw new Error("XML does not fulfills makes response requirements\n" + json);
-		}
-
-		return {
-			Response: {
-				...json.Response,
-				Results: {
-					AllVehicleMakes: json.Response.Results.AllVehicleMakes.filter(this.makeServiceUtils.isMake),
+		await this.databaseService.make.upsert({
+			create: {
+				makeId: make.makeId,
+				makeName: make.makeName,
+				vehicleTypesIds: {
+					set: make.vehicleTypes.map(type => type.typeId),
 				},
 			},
-		};
-	}
-
-	private parseMakeTypesXmlResponse(xml: string): MakeTypesResponse {
-		const validationResult = XMLValidator.validate(xml);
-		if (typeof validationResult !== "boolean") {
-			throw new Error("Unable to validate XML with make types:\n" + validationResult.err.msg);
-		}
-
-		const parser = new XMLParser();
-		const json = parser.parse(xml);
-		if (!this.makeServiceUtils.isMakeTypesResponse(json)) {
-			throw new Error("XML does not fulfills make types requirements\n" + json);
-		}
-
-		const vehicleTypes = json.Response.Results.VehicleTypesForMakeIds;
-		if (Array.isArray(vehicleTypes)) {
-			return {
-				Response: {
-					...json.Response,
-					Results: {
-						VehicleTypesForMakeIds: vehicleTypes.filter(this.makeServiceUtils.isMakeType),
-					},
+			update: {
+				makeName: make.makeName,
+				vehicleTypesIds: {
+					set: make.vehicleTypes.map(type => type.typeId),
 				},
-			};
-		}
-
-		if (!this.makeServiceUtils.isMakeType(vehicleTypes)) {
-			throw new Error("XML does not fulfills make types requirements\n" + vehicleTypes);
-		}
-
-		return json;
-	}
-
-	private createVehicleType(type: MakeType): VehicleType {
-		return {
-			typeId: type.VehicleTypeId,
-			typeName: type.VehicleTypeName,
-		};
+			},
+			where: {
+				makeId: make.makeId,
+			},
+		});
 	}
 }

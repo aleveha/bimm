@@ -1,15 +1,26 @@
-export interface MakeType {
+export interface ResponseVehicleType {
 	VehicleTypeId: number;
 	VehicleTypeName: string;
 }
 
-export interface MakeTypesResponse {
+export interface VehicleTypesResponse {
 	Response: {
 		Count: number;
 		Message: string;
 		SearchCriteria: string;
 		Results: {
-			VehicleTypesForMakeIds: MakeType | MakeType[];
+			VehicleTypesForMakeIds: ResponseVehicleType | ResponseVehicleType[];
 		};
 	};
+}
+
+export interface ParsedVehicleType {
+	typeId: number;
+	typeName: string;
+}
+
+export interface ParsedVehicleTypes {
+	count: number;
+	makeId: number;
+	result: ParsedVehicleType[];
 }
