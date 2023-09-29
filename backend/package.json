@@ -11,20 +11,27 @@
 		"test": "jest",
 		"test:cov": "jest --coverage",
 		"test:e2e": "jest --config ./test/jest-e2e.json",
-		"db:g": "prisma generate"
+		"db:g": "prisma generate",
+		"gql:g": "ts-node graphql-generate-typings.ts"
 	},
 	"dependencies": {
+		"@apollo/gateway": "^2.5.5",
+		"@apollo/server": "^4.9.3",
+		"@nestjs/apollo": "^12.0.9",
 		"@nestjs/common": "^10.2.6",
 		"@nestjs/config": "^3.1.1",
 		"@nestjs/core": "^10.2.6",
+		"@nestjs/graphql": "^12.0.9",
 		"@nestjs/platform-express": "^10.2.6",
 		"@prisma/client": "^5.3.1",
 		"axios": "^1.5.1",
 		"fast-xml-parser": "^4.3.1",
+		"graphql": "^16.8.1",
 		"prisma": "^5.3.1",
 		"reflect-metadata": "^0.1.13",
 		"rimraf": "^5.0.5",
-		"rxjs": "^7.8.1"
+		"rxjs": "^7.8.1",
+		"ts-morph": "^19.0.0"
 	},
 	"devDependencies": {
 		"@nestjs/cli": "^10.1.18",

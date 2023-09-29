@@ -31,8 +31,7 @@ export class MakesService {
 		}
 
 		const makesResponse = await this.fetchMakes();
-		const makes = makesResponse.result.slice(0, 50);
-		return await this.getVehiclesTypes(makes);
+		return await this.getVehiclesTypes(makesResponse.result);
 	}
 
 	private async getMakesFromDb(): Promise<MakeDto[]> {
