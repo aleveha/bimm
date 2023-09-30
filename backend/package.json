@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"scripts": {
 		"prebuild": "rimraf dist",
-		"build": "nest build",
+		"build": "nest build && copyfiles -f \"./src/**/*.graphql\" dist/graphql",
 		"format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
 		"dev": "nest start --watch",
 		"start": "node dist/main",
@@ -45,6 +45,7 @@
 		"@types/supertest": "^2.0.13",
 		"@typescript-eslint/eslint-plugin": "^6.7.3",
 		"@typescript-eslint/parser": "^6.7.3",
+		"copyfiles": "^2.4.1",
 		"eslint": "^8.50.0",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-prettier": "5.0.0",
