@@ -24,3 +24,22 @@ transform it to JSON format.
 - Service may schedule a job to get XML information on a regular basis
 - Service can expose GraphQL endpoint for GQL queries
 - Service can contain tests for each data transformation
+
+## Getting started
+
+Before you start, make sure you have `DATABASE_URL` environment variable set up in `.env` or `../docker-compose.yml`
+file.
+
+Local
+
+```bash
+npm install
+npm run dev
+```
+
+Docker
+
+```bash
+cd ../
+docker-compose up -d --build backend
+```
