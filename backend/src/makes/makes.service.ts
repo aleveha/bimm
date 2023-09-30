@@ -18,11 +18,11 @@ export class MakesService {
 	) {
 		cron.schedule("0 0 * * *", async () => {
 			try {
-				console.log("start fetching inside cron");
+				console.log("[Cron]: Fetching makes...");
 				const res = await this.getMakes(true);
-				console.log(`fetched ${res.length} makes`);
+				console.log(`[Cron]: Successfully fetched ${res.length} makes!`);
 			} catch (error) {
-				console.error("Error during cron\n" + error);
+				console.error("[Cron]: Error during fetching makes\n" + error);
 			}
 		});
 	}
