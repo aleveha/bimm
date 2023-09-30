@@ -80,9 +80,20 @@ export class MakesServiceUtils {
 		if (
 			!("Count" in obj["Response"] && typeof obj["Response"]["Count"] === "number") ||
 			!("Message" in obj["Response"] && typeof obj["Response"]["Message"] === "string") ||
-			!("Results" in obj["Response"] && typeof obj["Response"]["Results"] === "object" && obj["Response"]["Results"] !== null)
+			!(
+				"Results" in obj["Response"] &&
+				(typeof obj["Response"]["Results"] === "object" || typeof obj["Response"]["Results"] === "string") &&
+				obj["Response"]["Results"] !== null
+			)
 		) {
 			return false;
+		}
+
+		if (typeof obj["Response"]["Results"] === "string") {
+			obj["Response"]["Results"] = {
+				AllVehicleMakes: [],
+			};
+			return true;
 		}
 
 		return "AllVehicleMakes" in obj["Response"]["Results"] && Array.isArray(obj["Response"]["Results"]["AllVehicleMakes"]);
