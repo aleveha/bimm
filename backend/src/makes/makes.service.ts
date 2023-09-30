@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
+import cron from "node-cron";
 import { DatabaseService } from "../database/database.service";
 import { UtilsService } from "../utils/utils.service";
 import { MakesServiceUtils } from "./makes.service.utils";
@@ -14,7 +15,17 @@ export class MakesService {
 		private readonly databaseService: DatabaseService,
 		private readonly makeServiceUtils: MakesServiceUtils,
 		private readonly utilsService: UtilsService
-	) {}
+	) {
+		cron.schedule("0 0 * * *", async () => {
+			try {
+				console.log("start fetching inside cron");
+				const res = await this.getMakes(true);
+				console.log(`fetched ${res.length} makes`);
+			} catch (error) {
+				console.error("Error during cron\n" + error);
+			}
+		});
+	}
 
 	public async getMakes(actualize?: boolean): Promise<MakeDto[]> {
 		const lastActualizationAt = await this.databaseService.actualization.findFirst({
